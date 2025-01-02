@@ -9,12 +9,7 @@
 
 using namespace std;
 
-#define ASSERT(condition, msg) \
-    if (!(condition)) { \
-        cout << "Error: " << msg << endl; \
-        output.clear(); \
-        return output; \
-    } \
+#define ASSERT(condition, msg) if (!(condition)) throw string(msg);
 
 typedef variant<double, char> Token;
 
@@ -32,7 +27,7 @@ struct {
         auto rpn = ToRPN(expression);
 
         if (rpn.empty()) {
-            return NULL;
+            throw string("");
         }
 
         return EvaluateRPN(rpn);
@@ -44,14 +39,18 @@ struct {
         
         bool expect_operand = true;
         bool in_decimal = false;
+        bool in_negative = false;
         string current_num = "";
 
-        auto add_num = [&output, &current_num, &expect_operand, &in_decimal]() -> void {
-            if (!current_num.empty()) {
+        auto add_num = [&output, &current_num, &expect_operand, &in_decimal, &in_negative]() -> void {
+            if (!current_num.empty() && current_num.back() != '-') { 
+                ASSERT(expect_operand, "Unexpected digit");
+
                 output.push_back({ stod(current_num) });
                 
                 current_num = "";
                 in_decimal = false;
+                in_negative = false;
                 expect_operand = false;
             }
         };
@@ -59,11 +58,11 @@ struct {
         for (char token : expression) {
             if (nums.find(token) != string::npos) {
                 current_num += string(1, token);
-                
-                expect_operand = false;
             }
             
             else if (token == '.') {
+                ASSERT(!in_decimal, "Unexpected floating point");
+
                 in_decimal = true;
                 current_num += string(1, token);
             }
@@ -72,8 +71,18 @@ struct {
                 add_num();
 
                 if (ops[token]) {
-                    ASSERT(!expect_operand, "Unexpected operator");
+                    if (token == '-' && expect_operand) {
+                        ASSERT(!in_negative, "Unexpected negative sign");
 
+                        current_num += string(1, token);
+
+                        in_negative = true;
+
+                        continue;
+                    }
+
+                    ASSERT(!expect_operand, "Unexpected operator");
+                    
                     while (
                         !operators.empty() && operators.top() != '(' &&
                         ops[operators.top()] >= ops[token]
@@ -88,16 +97,17 @@ struct {
 
                 else if (token == '(') {
                     operators.push(token);
-                    expect_operand = false;
+
+                    expect_operand = true;
                 }
 
                 else if (token == ')') {
                     while (!operators.empty() && operators.top() != '(') {
                         output.push_back({ operators.top() });
-                        operators.pop();
-                        
-                        ASSERT(!operators.empty(), "Mismatched parentheses");
+                        operators.pop(); 
                     }
+                    
+                    ASSERT(!operators.empty(), "Mismatched parentheses");
 
                     operators.pop();
                 }
@@ -110,7 +120,10 @@ struct {
 
         add_num();
 
-        ASSERT(!expect_operand, "Unexpected operator");
+        ASSERT(!in_negative, "Unexpected operator");
+
+        if (!output.empty())
+            ASSERT(!expect_operand, "Unexpected operator");
 
         while (!operators.empty()) {
             ASSERT(operators.top() != '(', "Mismatched parentheses");
@@ -173,9 +186,15 @@ int main() {
         cout << "Expression: ";
         getline(cin, exp);
         
-        double res = Parser.Parse(exp);
+        try {
+            auto res = Parser.Parse(exp);
 
-        if (res != NULL)
             cout << "Result: " << res << endl;
+        }
+
+        catch (const string& error) {
+            if (error.size())
+                cout << "Error: " << error << endl;
+        }
     }
 }
