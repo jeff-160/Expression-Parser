@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <cassert>
 #include <cmath>
+#include <iomanip>
 
 using namespace std;
 
@@ -131,8 +132,9 @@ struct {
 
         ASSERT(!in_negative, Errors::Operator);
 
-        if (!output.empty())
+        if (!output.empty()) {
             ASSERT(!expect_operand, Errors::Operator);
+        }
 
         while (!operators.empty()) {
             ASSERT(operators.top() != '(', Errors::Parentheses);
@@ -173,6 +175,10 @@ struct {
                         res = a * b;
                         break;
                     case '/':
+                        if (b == 0) {
+                            throw string("Division by zero");
+                        }
+
                         res = a / b;
                         break;
                     case '^':
@@ -188,6 +194,27 @@ struct {
     }
 } Parser;
 
+string Truncate(double num) {
+    string str = to_string(num);
+
+    for (size_t i = str.size() - 1 ; i >= 0 ; i--) {
+        if (str[i] == '0') {
+            str.pop_back();
+        }
+
+        else if (str[i] == '.') {
+            str.pop_back();
+            break;
+        }
+
+        else {
+            break;
+        }
+    }
+
+    return str;
+}
+
 int main() {
     while (1) {
         string exp;
@@ -198,12 +225,13 @@ int main() {
         try {
             auto res = Parser.Parse(exp);
 
-            cout << "Result: " << res << endl;
+            cout << "Result: " << (res == INFINITY ? "Infinity" : Truncate(res)) << endl;
         }
 
         catch (const string& error) {
-            if (!error.empty())
+            if (!error.empty()) {
                 cout << "Error: " << error << endl;
+            }
         }
     }
 }
