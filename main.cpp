@@ -13,6 +13,15 @@ using namespace std;
 
 typedef variant<double, char> Token;
 
+namespace Errors {
+    string Parentheses = "Mismatched parentheses";
+    string Operator = "Unexpected operator";
+    string Digit = "Unexpected digit";
+    string NegativeSign = "Unexpected negative sign";
+    string FloatingPoint = "Unexpected floating point";
+    string Token = "Invalid token";
+}
+
 struct {
     string nums = "0123456789";
     unordered_map<char, int> ops = {
@@ -44,7 +53,7 @@ struct {
 
         auto add_num = [&output, &current_num, &expect_operand, &in_decimal, &in_negative]() -> void {
             if (!current_num.empty() && current_num.back() != '-') { 
-                ASSERT(expect_operand, "Unexpected digit");
+                ASSERT(expect_operand, Errors::Digit);
 
                 output.push_back({ stod(current_num) });
                 
@@ -61,7 +70,7 @@ struct {
             }
             
             else if (token == '.') {
-                ASSERT(!in_decimal, "Unexpected floating point");
+                ASSERT(!in_decimal, Errors::FloatingPoint);
 
                 in_decimal = true;
                 current_num += string(1, token);
@@ -72,7 +81,7 @@ struct {
 
                 if (ops[token]) {
                     if (token == '-' && expect_operand) {
-                        ASSERT(!in_negative, "Unexpected negative sign");
+                        ASSERT(!in_negative, Errors::NegativeSign);
 
                         current_num += string(1, token);
 
@@ -81,7 +90,7 @@ struct {
                         continue;
                     }
 
-                    ASSERT(!expect_operand, "Unexpected operator");
+                    ASSERT(!expect_operand, Errors::Operator);
                     
                     while (
                         !operators.empty() && operators.top() != '(' &&
@@ -107,26 +116,26 @@ struct {
                         operators.pop(); 
                     }
                     
-                    ASSERT(!operators.empty(), "Mismatched parentheses");
+                    ASSERT(!operators.empty(), Errors::Parentheses);
 
                     operators.pop();
                 }
 
                 else {
-                    ASSERT(token == ' ', "Invalid token");
+                    ASSERT(token == ' ', Errors::Token);
                 }
             }
         }
 
         add_num();
 
-        ASSERT(!in_negative, "Unexpected operator");
+        ASSERT(!in_negative, Errors::Operator);
 
         if (!output.empty())
-            ASSERT(!expect_operand, "Unexpected operator");
+            ASSERT(!expect_operand, Errors::Operator);
 
         while (!operators.empty()) {
-            ASSERT(operators.top() != '(', "Mismatched parentheses");
+            ASSERT(operators.top() != '(', Errors::Parentheses);
 
             output.push_back({ operators.top() });
 
