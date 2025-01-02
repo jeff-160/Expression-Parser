@@ -202,7 +202,7 @@ int main() {
         }
 
         catch (const string& error) {
-            if (error.size())
+            if (!error.empty())
                 cout << "Error: " << error << endl;
         }
     }
